@@ -572,8 +572,8 @@ body::after {
     Kodeword v1.1<br>
     A party game of words<br>
     and hidden identities.<br><br>
-    Built with ♥ using<br>
-    Supabase Realtime
+    Built with AI using<br>
+    Production by Krit
   </div>
 </div>
 
@@ -704,6 +704,18 @@ body::after {
   <div class="accent-line"></div>
   <div class="game-room-code">ROOM <span id="game-room-code-display">—</span></div>
 
+  <div id="game-theme-label" style="
+    font-family: var(--font-display);
+    font-size: 13px;
+    letter-spacing: 5px;
+    color: var(--neon);
+    text-transform: uppercase;
+    opacity: 0.55;
+    margin-bottom: 14px;
+    text-align: center;
+    text-shadow: var(--glow-neon);
+  ">—</div>
+
   <div class="word-card" id="word-card">
     <div class="card-front">
       <div class="card-face-icon">🂠</div>
@@ -730,7 +742,7 @@ body::after {
 ════════════════════════════ -->
 <div id="screen-results" class="screen">
   <div class="accent-line"></div>
-  <div class="results-title">GAME OVER</div>
+  <div class="results-title">END</div>
   <div class="results-words">
     <div class="word-reveal a">
       <div class="word-reveal-label">MAJORITY WORD</div>
@@ -797,57 +809,204 @@ function startMusic() {
     musicCtx = new (window.AudioContext || window.webkitAudioContext)();
     musicRunning = true;
 
-    // Eerie mystery loop — layered oscillators with slow LFO modulation
-    const masterGain = musicCtx.createGain();
-    masterGain.gain.setValueAtTime(0.07, musicCtx.currentTime);
-    masterGain.connect(musicCtx.destination);
+    // ── "Funny" by Gold-Tiger inspired synthesized loop ──
+    // Upbeat funky groove: bouncy bass line + chord stabs + hi-hat rhythm
+    const master = musicCtx.createGain();
+    master.gain.setValueAtTime(0.0, musicCtx.currentTime);
+    master.gain.linearRampToValueAtTime(0.13, musicCtx.currentTime + 1.5);
+    master.connect(musicCtx.destination);
+    musicNodes.push(master);
 
-    // Drone bass note
-    const drone = musicCtx.createOscillator();
-    drone.type = 'sine';
-    drone.frequency.setValueAtTime(55, musicCtx.currentTime);
-    const droneGain = musicCtx.createGain();
-    droneGain.gain.setValueAtTime(0.4, musicCtx.currentTime);
-    drone.connect(droneGain); droneGain.connect(masterGain);
-    drone.start();
+    const BPM = 110;
+    const beat = 60 / BPM;           // one beat in seconds
+    const bar  = beat * 4;           // 4/4
 
-    // Mid shimmer
-    const shimmer = musicCtx.createOscillator();
-    shimmer.type = 'sine';
-    shimmer.frequency.setValueAtTime(220, musicCtx.currentTime);
-    const shimGain = musicCtx.createGain();
-    shimGain.gain.setValueAtTime(0.0, musicCtx.currentTime);
-    shimmer.connect(shimGain); shimGain.connect(masterGain);
-    shimmer.start();
+    // ── Funky bass line: root-fifth bounce pattern ──
+    // Key of F: F2=87, C3=130, G2=98, Bb2=116, A2=110
+    const bassPattern = [
+      { f:87,  t:0,      d:beat*0.45 },
+      { f:87,  t:beat*0.5, d:beat*0.4 },
+      { f:130, t:beat*1,   d:beat*0.4 },
+      { f:87,  t:beat*1.5, d:beat*0.4 },
+      { f:87,  t:beat*2,   d:beat*0.45 },
+      { f:116, t:beat*2.5, d:beat*0.4 },
+      { f:98,  t:beat*3,   d:beat*0.4 },
+      { f:87,  t:beat*3.5, d:beat*0.4 },
+    ];
 
-    // LFO on shimmer gain for wavering effect
-    const lfo = musicCtx.createOscillator();
-    lfo.type = 'sine';
-    lfo.frequency.setValueAtTime(0.3, musicCtx.currentTime);
-    const lfoGain = musicCtx.createGain();
-    lfoGain.gain.setValueAtTime(0.12, musicCtx.currentTime);
-    lfo.connect(lfoGain); lfoGain.connect(shimGain.gain);
-    lfo.start();
+    // ── Chord stab frequencies (Fmaj7 → Gm7 → C7) ──
+    const chordPatterns = [
+      // Fmaj7: F3 A3 C4 E4
+      [174, 220, 262, 330],
+      // Gm7:  G3 Bb3 D4 F4
+      [196, 233, 294, 349],
+      // C7:   C3 E3  G3 Bb3
+      [130, 165, 196, 233],
+      // Fmaj7 again
+      [174, 220, 262, 330],
+    ];
+    const chordTimes = [0, bar, bar*2, bar*3];
 
-    // High mystery tone
-    const high = musicCtx.createOscillator();
-    high.type = 'triangle';
-    high.frequency.setValueAtTime(440, musicCtx.currentTime);
-    const highGain = musicCtx.createGain();
-    highGain.gain.setValueAtTime(0.05, musicCtx.currentTime);
-    high.connect(highGain); highGain.connect(masterGain);
-    high.start();
+    function scheduleBass(startTime) {
+      bassPattern.forEach(({ f, t, d }) => {
+        const osc = musicCtx.createOscillator();
+        const g   = musicCtx.createGain();
+        // Add slight saturation via waveshaper
+        const wsh = musicCtx.createWaveShaper();
+        const curve = new Float32Array(256);
+        for (let i = 0; i < 256; i++) {
+          const x = (i * 2) / 256 - 1;
+          curve[i] = (Math.PI + 300) * x / (Math.PI + 300 * Math.abs(x));
+        }
+        wsh.curve = curve;
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(f, startTime + t);
+        g.gain.setValueAtTime(0, startTime + t);
+        g.gain.linearRampToValueAtTime(0.35, startTime + t + 0.01);
+        g.gain.setValueAtTime(0.35, startTime + t + d - 0.02);
+        g.gain.linearRampToValueAtTime(0, startTime + t + d);
+        osc.connect(wsh); wsh.connect(g); g.connect(master);
+        osc.start(startTime + t);
+        osc.stop(startTime + t + d + 0.05);
+        musicNodes.push(osc, g, wsh);
+      });
+    }
 
-    // Slow pitch drift on high tone
-    const lfo2 = musicCtx.createOscillator();
-    lfo2.type = 'sine';
-    lfo2.frequency.setValueAtTime(0.07, musicCtx.currentTime);
-    const lfo2Gain = musicCtx.createGain();
-    lfo2Gain.gain.setValueAtTime(8, musicCtx.currentTime);
-    lfo2.connect(lfo2Gain); lfo2Gain.connect(high.frequency);
-    lfo2.start();
+    function scheduleChords(startTime, barOffset) {
+      const chord = chordPatterns[barOffset % chordPatterns.length];
+      // Stab on beat 1 and beat 3
+      [0, beat * 2].forEach(stab => {
+        chord.forEach(freq => {
+          const osc = musicCtx.createOscillator();
+          const g   = musicCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(freq, startTime + stab);
+          g.gain.setValueAtTime(0, startTime + stab);
+          g.gain.linearRampToValueAtTime(0.04, startTime + stab + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, startTime + stab + beat * 0.6);
+          osc.connect(g); g.connect(master);
+          osc.start(startTime + stab);
+          osc.stop(startTime + stab + beat * 0.7);
+          musicNodes.push(osc, g);
+        });
+      });
+    }
 
-    musicNodes = [masterGain, drone, droneGain, shimmer, shimGain, lfo, lfoGain, high, highGain, lfo2, lfo2Gain];
+    function scheduleHihat(startTime) {
+      // 16th note hi-hat: every beat/4
+      for (let i = 0; i < 16; i++) {
+        const t = startTime + (beat / 4) * i;
+        const buf = musicCtx.createBuffer(1, musicCtx.sampleRate * 0.04, musicCtx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let j = 0; j < data.length; j++) data[j] = Math.random() * 2 - 1;
+        const src = musicCtx.createBufferSource();
+        src.buffer = buf;
+        const hpf = musicCtx.createBiquadFilter();
+        hpf.type = 'highpass';
+        hpf.frequency.value = 8000;
+        const g = musicCtx.createGain();
+        // Accent on beat 1, 2, 3, 4 vs offbeats
+        const isDownbeat = i % 4 === 0;
+        const isOffbeat  = i % 2 === 1;
+        g.gain.setValueAtTime(isDownbeat ? 0.06 : isOffbeat ? 0.035 : 0.02, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+        src.connect(hpf); hpf.connect(g); g.connect(master);
+        src.start(t);
+        musicNodes.push(src, hpf, g);
+      }
+    }
+
+    function scheduleKick(startTime) {
+      // Kick on beats 1 and 3
+      [0, beat * 2].forEach(t => {
+        const osc = musicCtx.createOscillator();
+        const g   = musicCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, startTime + t);
+        osc.frequency.exponentialRampToValueAtTime(40, startTime + t + 0.15);
+        g.gain.setValueAtTime(0.5, startTime + t);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + t + 0.25);
+        osc.connect(g); g.connect(master);
+        osc.start(startTime + t);
+        osc.stop(startTime + t + 0.3);
+        musicNodes.push(osc, g);
+      });
+    }
+
+    function scheduleSnare(startTime) {
+      // Snare on beats 2 and 4
+      [beat, beat * 3].forEach(t => {
+        const buf = musicCtx.createBuffer(1, musicCtx.sampleRate * 0.12, musicCtx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let j = 0; j < data.length; j++) data[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / data.length, 2);
+        const src = musicCtx.createBufferSource();
+        src.buffer = buf;
+        const bpf = musicCtx.createBiquadFilter();
+        bpf.type = 'bandpass';
+        bpf.frequency.value = 2000;
+        bpf.Q.value = 0.5;
+        const g = musicCtx.createGain();
+        g.gain.setValueAtTime(0.25, startTime + t);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + t + 0.1);
+        src.connect(bpf); bpf.connect(g); g.connect(master);
+        src.start(startTime + t);
+        musicNodes.push(src, bpf, g);
+      });
+    }
+
+    // ── Melody: simple funky lick over the chords ──
+    const melodyNotes = [
+      { f:349, t:0,          d:beat*0.4 },  // F4
+      { f:330, t:beat*0.5,   d:beat*0.4 },  // E4
+      { f:294, t:beat*1,     d:beat*0.4 },  // D4
+      { f:262, t:beat*1.5,   d:beat*0.3 },  // C4
+      { f:294, t:beat*2,     d:beat*0.4 },  // D4
+      { f:330, t:beat*2.5,   d:beat*0.4 },  // E4
+      { f:349, t:beat*3,     d:beat*0.8 },  // F4
+    ];
+
+    function scheduleMelody(startTime) {
+      melodyNotes.forEach(({ f, t, d }) => {
+        const osc = musicCtx.createOscillator();
+        const g   = musicCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(f, startTime + t);
+        g.gain.setValueAtTime(0, startTime + t);
+        g.gain.linearRampToValueAtTime(0.09, startTime + t + 0.015);
+        g.gain.setValueAtTime(0.09, startTime + t + d - 0.02);
+        g.gain.linearRampToValueAtTime(0, startTime + t + d);
+        osc.connect(g); g.connect(master);
+        osc.start(startTime + t);
+        osc.stop(startTime + t + d + 0.05);
+        musicNodes.push(osc, g);
+      });
+    }
+
+    // ── Loop scheduler: schedule 4 bars at a time, repeat ──
+    let loopBar = 0;
+    let nextBarTime = musicCtx.currentTime + 0.1;
+    const LOOKAHEAD = bar * 4; // schedule 4 bars ahead
+
+    function scheduleLoop() {
+      while (nextBarTime < musicCtx.currentTime + LOOKAHEAD) {
+        scheduleBass(nextBarTime);
+        scheduleChords(nextBarTime, loopBar);
+        scheduleHihat(nextBarTime);
+        scheduleKick(nextBarTime);
+        scheduleSnare(nextBarTime);
+        if (loopBar % 2 === 0) scheduleMelody(nextBarTime);
+        nextBarTime += bar;
+        loopBar++;
+      }
+    }
+
+    scheduleLoop();
+    const loopInterval = setInterval(() => {
+      if (!musicRunning) { clearInterval(loopInterval); return; }
+      scheduleLoop();
+    }, (bar * 2) * 1000);
+    musicNodes.push({ stop: () => clearInterval(loopInterval), disconnect: () => {} });
+
   } catch(e) {
     console.warn('Music failed to start:', e);
   }
@@ -1117,13 +1276,41 @@ function renderGameScreen(room) {
     roleBadge.style.display = 'none';
   }
 
+  // Show the game theme above the card for all players
+  const themeLabelEl = document.getElementById('game-theme-label');
+  if (themeLabelEl) themeLabelEl.textContent = state.settings.theme || '—';
+
   document.getElementById('word-card').classList.remove('flipped');
   document.getElementById('btn-end-game').style.display = state.isHost ? 'block' : 'none';
 }
 
 async function renderResultsScreen(room) {
-  document.getElementById('result-word-a').textContent = room.word_a || '—';
-  document.getElementById('result-word-b').textContent = room.word_b || '—';
+  // Translate the revealed words into this player's chosen language
+  const theme   = (room.settings?.theme) || state.settings.theme || 'Professional';
+  const lang    = state.language;
+  const enPairs = WORD_PAIRS[theme]?.['en'];
+  const localPairs = WORD_PAIRS[theme]?.[lang];
+
+  let displayA = room.word_a || '—';
+  let displayB = room.word_b || '—';
+
+  if (enPairs && localPairs && room.word_a) {
+    const pairIdx = enPairs.findIndex(p =>
+      p[0].toLowerCase() === (room.word_a || '').toLowerCase()
+    );
+    if (pairIdx !== -1 && localPairs[pairIdx]) {
+      displayA = localPairs[pairIdx][0];
+      displayB = localPairs[pairIdx][1];
+    }
+  }
+
+  document.getElementById('result-word-a').textContent = displayA;
+  document.getElementById('result-word-b').textContent = displayB;
+
+  // Apply JP font if needed
+  const fontVal = lang === 'jp' ? "'Noto Sans JP', sans-serif" : "'Bebas Neue', sans-serif";
+  document.getElementById('result-word-a').style.fontFamily = fontVal;
+  document.getElementById('result-word-b').style.fontFamily = fontVal;
 
   const { data: players } = await db
     .from('players')
@@ -1421,6 +1608,10 @@ document.querySelectorAll('[data-lang]').forEach(btn => {
       // re-flip card to front so player re-taps to see new language
       document.getElementById('word-card').classList.remove('flipped');
       showToast('Language updated — tap card to reveal');
+    }
+    // If on results screen, re-render the revealed words in new language
+    if (document.getElementById('screen-results').classList.contains('active') && state.currentRoom) {
+      renderResultsScreen(state.currentRoom);
     }
   });
 });
