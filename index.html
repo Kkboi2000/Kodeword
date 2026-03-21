@@ -1095,7 +1095,7 @@ async function joinRoom() {
 
   setLoading(true, 'JOINING ROOM...');
 
-  const { data: room, error } = await supabase
+const { data: room, error } = await db
     .from('rooms').select('*').eq('id', code).single();
 
   if (!room || error) {
@@ -1115,7 +1115,7 @@ async function joinRoom() {
   localStorage.setItem('kw_name', nickname);
 
   // Check if player already in room (reconnect)
-  const { data: existing } = await supabase
+const { data: existing } = await db
     .from('players').select('id').eq('id', state.playerId).single();
 
   if (!existing) {
