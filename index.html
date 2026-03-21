@@ -837,7 +837,7 @@ async function handleRoomChange(room) {
 
   if (room.status === 'playing') {
     // Fetch MY player row to get my word
-    const { data: me } = await supabase
+    const { data: me } = await db
       .from('players')
       .select('*')
       .eq('id', state.playerId)
@@ -870,7 +870,7 @@ async function handleRoomChange(room) {
 
 async function handlePlayersChange() {
   if (!state.roomCode) return;
-  const { data: players } = await supabase
+  const { data: players } = await db
     .from('players')
     .select('*')
     .eq('room_id', state.roomCode)
@@ -937,7 +937,7 @@ async function renderResultsScreen(room) {
   document.getElementById('result-word-a').textContent = room.word_a || '—';
   document.getElementById('result-word-b').textContent = room.word_b || '—';
 
-  const { data: players } = await supabase
+  const { data: players } = await db
     .from('players')
     .select('*')
     .eq('room_id', state.roomCode)
@@ -1014,7 +1014,7 @@ async function createRoom() {
 }
 
 async function startGame() {
-  const { data: players } = await supabase
+  const { data: players } = await db
     .from('players').select('id').eq('room_id', state.roomCode);
 
   if (!players || players.length < 2) {
@@ -1142,7 +1142,7 @@ const { data: existing } = await db
   document.getElementById('guest-waiting').style.display = 'block';
   document.getElementById('setup-title').textContent = 'JOINED';
 
-  const { data: players } = await supabase
+  const { data: players } = await db
     .from('players').select('*').eq('room_id', code).order('joined_at');
   document.getElementById('guest-player-count').textContent = players?.length || 0;
   renderPlayerChips(players || [], 'guest-player-list');
