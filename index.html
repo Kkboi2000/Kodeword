@@ -1028,7 +1028,7 @@ function syncMusic() {
 
 // ── WORD PAIRS ─────────────────────────
 const WORD_PAIRS = {
-  Professional: {
+  profession: {
     en: [['Lawyer','Police'],['Doctor','Nurse'],['CEO','Customer'],['Engineer','Architect'],['Accountant','Math teacher'],['Violinist','Guitarist'],['Mother','Aunt'],['Dancer','Singer'],['Bus driver','Pilot'],['Ninja','Samurai']],
     th: [['ทนายความ','ตำรวจ'],['แพทย์','พยาบาล'],['ซีอีโอ','ลูกค้า'],['วิศวกร','สถาปนิก'],['นักบัญชี','อาจารย์สอนเลข'],['นักไวโอลิน','มือกีต้าร์'],['แม่','ป้า'],['แดนซ์เซอร์','นักร้อง'],['คนขับรถบัส','นักบิน'],['นินจา','ซามูไร']],
     jp: [['弁護士','警察'],['医師','看護師'],['CEO','お客さん'],['エンジニア','建築士'],['会計士','数学教師'],['バイオリニスト','ギタリスト'],['お母さん','おばさん'],['ダンサー','歌手'],['バス運転手','飛行士'],['忍者','侍']],
@@ -1114,7 +1114,7 @@ function playSound(type) {
 // is what matters — language is purely local/display.
 function getMyWordInMyLang() {
   if (!state.wordA || !state.wordB || !state.myRole) return state.word || '???';
-  const theme = state.settings.theme || 'Professional';
+  const theme = state.settings.theme || 'profession';
   const lang = state.language;
   const pairsInLang = WORD_PAIRS[theme]?.[lang];
   if (!pairsInLang) return state.myRole === 'minority' ? state.wordB : state.wordA;
@@ -1286,7 +1286,7 @@ function renderGameScreen(room) {
 
 async function renderResultsScreen(room) {
   // Translate the revealed words into this player's chosen language
-  const theme   = (room.settings?.theme) || state.settings.theme || 'Professional';
+  const theme   = (room.settings?.theme) || state.settings.theme || 'profession';
   const lang    = state.language;
   const enPairs = WORD_PAIRS[theme]?.['en'];
   const localPairs = WORD_PAIRS[theme]?.[lang];
@@ -1364,7 +1364,7 @@ async function createRoom() {
     status: 'waiting',
     word_a: null,
     word_b: null,
-    settings: { minority: 1, theme: 'Professional', show_role: true },
+    settings: { minority: 1, theme: 'profession', show_role: true },
   });
   if (re) { setLoading(false); showToast('Error creating room: ' + re.message); state.roomCode = null; state.isHost = false; return; }
 
@@ -1552,7 +1552,7 @@ async function joinRoom() {
 const themeGrid = document.getElementById('theme-grid');
 THEMES.forEach(t => {
   const btn = document.createElement('button');
-  btn.className = 'theme-btn' + (t === 'Professional' ? ' active' : '');
+  btn.className = 'theme-btn' + (t === 'profession' ? ' active' : '');
   btn.textContent = t;
   btn.addEventListener('click', () => {
     themeGrid.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
