@@ -1832,10 +1832,13 @@ document.getElementById('btn-exit-game').addEventListener('click', exitToTitle);
 
 // Confirm modal buttons
 document.getElementById('confirm-yes').addEventListener('click', async () => {
+  const cb = _confirmCallback;
   hideConfirmModal();
-  if (_confirmCallback) await _confirmCallback();
+  if (cb) await cb();
 });
-document.getElementById('confirm-no').addEventListener('click', hideConfirmModal);
+document.getElementById('confirm-no').addEventListener('click', () => {
+  hideConfirmModal();
+});
 
 // ── CONNECTION CHECK ───────────────────
 async function init() {
