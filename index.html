@@ -1104,6 +1104,13 @@ const WORD_PAIRS = {
 
 const THEMES = Object.keys(WORD_PAIRS);
 
+// Resolve a theme string to the correct WORD_PAIRS key (case-insensitive)
+function resolveTheme(t) {
+  if (!t) return THEMES[0];
+  const found = THEMES.find(k => k.toLowerCase() === t.toLowerCase());
+  return found || THEMES[0];
+}
+
 // ── THEME LABELS (localized) ───────────
 const THEME_LABELS = {
   profession: { en: 'Profession', th: 'อาชีพ',     jp: '職業' },
@@ -1174,7 +1181,7 @@ function playSound(type) {
 // is what matters — language is purely local/display.
 function getMyWordInMyLang() {
   if (!state.wordA || !state.wordB || !state.myRole) return state.word || '???';
-  const theme = state.settings.theme || 'profession';
+  const theme = resolveTheme(state.settings.theme || 'profession');
   const lang = state.language;
   const pairsInLang = WORD_PAIRS[theme]?.[lang];
   if (!pairsInLang) return state.myRole === 'minority' ? state.wordB : state.wordA;
@@ -1360,7 +1367,7 @@ function renderGameScreen(room) {
 
 async function renderResultsScreen(room) {
   // Translate the revealed words into this player's chosen language
-  const theme   = (room.settings?.theme) || state.settings.theme || 'profession';
+  const theme = resolveTheme((room.settings?.theme) || state.settings.theme || 'profession');
   const lang    = state.language;
   const enPairs = WORD_PAIRS[theme]?.['en'];
   const localPairs = WORD_PAIRS[theme]?.[lang];
@@ -1485,7 +1492,8 @@ async function startGame() {
 
   setLoading(true, 'STARTING GAME...');
 
-  const theme = state.settings.theme;
+  const theme = resolveTheme(state.settings.theme);
+  state.settings.theme = theme; // normalise
   // Host picks words using their own language, but we always
   // store the English index so guests can translate to their own language
   const enPairs = WORD_PAIRS[theme]['en'];
