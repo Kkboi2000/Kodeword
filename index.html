@@ -517,6 +517,41 @@ body::after {
 /* ── NOOP on disabled ── */
 [disabled] { pointer-events: none; }
 
+/* ── CONFIRMATION MODAL ── */
+#confirm-modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.85); z-index: 6000;
+  align-items: center; justify-content: center;
+}
+#confirm-modal.open { display: flex; }
+.confirm-box {
+  background: var(--surface); border: 1px solid var(--border2);
+  padding: 32px 28px; max-width: 320px; width: 90%;
+  box-shadow: 0 0 48px rgba(0,229,255,.12);
+  display: flex; flex-direction: column; gap: 16px;
+  text-align: center;
+}
+.confirm-title {
+  font-family: var(--font-display); font-size: 28px;
+  letter-spacing: 3px; color: var(--pink);
+}
+.confirm-msg { font-size: 12px; color: #5a8a9f; line-height: 1.7; letter-spacing: 1px; }
+.confirm-btns { display: flex; gap: 10px; justify-content: center; margin-top: 8px; }
+.confirm-yes {
+  background: var(--pink); color: var(--black); border: none;
+  padding: 12px 28px; font-family: var(--font-display);
+  font-size: 20px; letter-spacing: 2px; cursor: pointer;
+  transition: opacity .15s;
+}
+.confirm-yes:hover { opacity: .85; }
+.confirm-no {
+  background: transparent; color: var(--white);
+  border: 1px solid var(--border2); padding: 12px 28px;
+  font-family: var(--font-display); font-size: 20px;
+  letter-spacing: 2px; cursor: pointer; transition: all .15s;
+}
+.confirm-no:hover { border-color: var(--neon); color: var(--neon); }
+
 /* ── TOP ACCENT LINE ── */
 .accent-line {
   position: absolute; top: 0; left: 0; right: 0; height: 1px;
@@ -763,14 +798,26 @@ body::after {
 <!-- ════════════════════════════════════════════
      JAVASCRIPT
 ════════════════════════════════════════════ -->
+<!-- ═══ CONFIRM MODAL ═══ -->
+<div id="confirm-modal">
+  <div class="confirm-box">
+    <div class="confirm-title">DELETE ROOM?</div>
+    <div class="confirm-msg">This will kick all players and delete the room. Are you sure?</div>
+    <div class="confirm-btns">
+      <button class="confirm-yes" id="confirm-yes">YES</button>
+      <button class="confirm-no" id="confirm-no">CANCEL</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 
 // ══════════════════════════════════════
 //  ⚠️  REPLACE THESE WITH YOUR VALUES
 // ══════════════════════════════════════
-const SUPABASE_URL  = 'https://wzdiwbbvlxamqcvrqrei.supabase.co';
-const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZGl3YmJ2bHhhbXFjdnJxcmVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNzUwNjgsImV4cCI6MjA4OTY1MTA2OH0.mkZEt0eFgvHDJwY-stogCre8U_yzCSoX5mkfqcGCKmg';
+const SUPABASE_URL  = 'https://njwcahtehunvrjulgzjx.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qd2NhaHRlaHVudnJqdWxnemp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxODE5NDIsImV4cCI6MjA4OTc1Nzk0Mn0.zhXXVu43AY4DTjlLQC3TDZVdiLQ44tg1e4OBdfVhe-o';
 // ══════════════════════════════════════
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1057,6 +1104,19 @@ const WORD_PAIRS = {
 
 const THEMES = Object.keys(WORD_PAIRS);
 
+// ── THEME LABELS (localized) ───────────
+const THEME_LABELS = {
+  profession: { en: 'Profession', th: 'อาชีพ',     jp: '職業' },
+  Place:      { en: 'Place',      th: 'สถานที่',    jp: '場所' },
+  Food:       { en: 'Food',       th: 'อาหาร',     jp: '食べ物' },
+  Activity:   { en: 'Activity',   th: 'กิจกรรม',   jp: 'アクティビティ' },
+  Animal:     { en: 'Animal',     th: 'สัตว์',      jp: '動物' },
+};
+function getLocalThemeLabel(themeKey) {
+  const lang = state.language || 'en';
+  return (THEME_LABELS[themeKey] || {})[lang] || themeKey;
+}
+
 // ── UTILS ──────────────────────────────
 function generateId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -1177,7 +1237,21 @@ function subscribeRoom(roomCode) {
 }
 
 async function handleRoomChange(room) {
-  if (!room) return;
+  if (!room) {
+    // Room was hard-deleted — kick guests back to title
+    if (!state.isHost) {
+      showToast('Host ended the room. Returning to title...');
+      setTimeout(async () => { await _doGuestExit(); }, 1500);
+    }
+    return;
+  }
+
+  // Host marked the room as 'deleted' — auto-kick guests
+  if (room.status === 'deleted' && !state.isHost) {
+    showToast('Host ended the room. Returning to title...');
+    setTimeout(async () => { await _doGuestExit(); }, 1500);
+    return;
+  }
 
   if (room.status === 'playing') {
     const { data: me } = await db
@@ -1276,9 +1350,9 @@ function renderGameScreen(room) {
     roleBadge.style.display = 'none';
   }
 
-  // Show the game theme above the card for all players
+  // Show the game theme above the card for all players (in their own language)
   const themeLabelEl = document.getElementById('game-theme-label');
-  if (themeLabelEl) themeLabelEl.textContent = state.settings.theme || '—';
+  if (themeLabelEl) themeLabelEl.textContent = getLocalThemeLabel(state.settings.theme) || '—';
 
   document.getElementById('word-card').classList.remove('flipped');
   document.getElementById('btn-end-game').style.display = state.isHost ? 'block' : 'none';
@@ -1456,16 +1530,39 @@ async function resetToLobby() {
 }
 
 async function exitToTitle() {
+  // Host sees a confirmation before deleting the room
+  if (state.isHost && state.roomCode) {
+    showConfirmModal(async () => {
+      await _doHostExit();
+    });
+    return;
+  }
+  // Guest just leaves quietly
+  await _doGuestExit();
+}
+
+async function _doHostExit() {
   if (state.roomCode) {
-    if (state.isHost) {
-      // Host leaving kills the room for everyone
-      await db.from('players').delete().eq('room_id', state.roomCode);
-      await db.from('rooms').delete().eq('id', state.roomCode);
-    } else {
-      await db.from('players').delete().eq('id', state.playerId);
-    }
+    // Mark room as deleted so guests get kicked via realtime
+    await db.from('rooms').update({ status: 'deleted' }).eq('id', state.roomCode);
+    await db.from('players').delete().eq('room_id', state.roomCode);
+    await db.from('rooms').delete().eq('id', state.roomCode);
     unsubAll();
   }
+  _clearGameState();
+  showScreen('screen-title');
+}
+
+async function _doGuestExit() {
+  if (state.roomCode) {
+    await db.from('players').delete().eq('id', state.playerId);
+    unsubAll();
+  }
+  _clearGameState();
+  showScreen('screen-title');
+}
+
+function _clearGameState() {
   state.roomCode  = null;
   state.isHost    = false;
   state.word      = null;
@@ -1474,7 +1571,17 @@ async function exitToTitle() {
   state.wordA     = null;
   state.wordB     = null;
   state.currentRoom = null;
-  showScreen('screen-title');
+}
+
+// ── CONFIRMATION MODAL ─────────────────
+let _confirmCallback = null;
+function showConfirmModal(onYes) {
+  _confirmCallback = onYes;
+  document.getElementById('confirm-modal').classList.add('open');
+}
+function hideConfirmModal() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  _confirmCallback = null;
 }
 
 // ════════════════════════════
@@ -1498,6 +1605,11 @@ async function joinRoom() {
   if (!room || error) {
     setLoading(false);
     document.getElementById('join-error').textContent = 'Room not found!';
+    return;
+  }
+  if (room.status === 'deleted') {
+    setLoading(false);
+    document.getElementById('join-error').textContent = 'Room no longer exists!';
     return;
   }
   if (room.status === 'playing') {
@@ -1605,6 +1717,9 @@ document.querySelectorAll('[data-lang]').forEach(btn => {
     // If currently in game, re-render word in new language immediately
     if (document.getElementById('screen-game').classList.contains('active')) {
       updateCardWord();
+      // Also update the localized theme label
+      const themeLabelEl = document.getElementById('game-theme-label');
+      if (themeLabelEl) themeLabelEl.textContent = getLocalThemeLabel(state.settings.theme) || '—';
       // re-flip card to front so player re-taps to see new language
       document.getElementById('word-card').classList.remove('flipped');
       showToast('Language updated — tap card to reveal');
@@ -1657,16 +1772,21 @@ document.getElementById('btn-join-game').addEventListener('click', () => {
 
 // Back button (lobby → title)
 document.getElementById('setup-back').addEventListener('click', async () => {
-  if (state.roomCode) {
-    if (state.isHost) {
+  if (state.roomCode && state.isHost) {
+    showConfirmModal(async () => {
+      await db.from('rooms').update({ status: 'deleted' }).eq('id', state.roomCode);
       await db.from('players').delete().eq('room_id', state.roomCode);
       await db.from('rooms').delete().eq('id', state.roomCode);
-    } else {
-      await db.from('players').delete().eq('id', state.playerId);
-    }
+      unsubAll();
+      _clearGameState();
+      showScreen('screen-title');
+    });
+    return;
+  }
+  if (state.roomCode && !state.isHost) {
+    await db.from('players').delete().eq('id', state.playerId);
     unsubAll();
-    state.roomCode = null;
-    state.isHost = false;
+    _clearGameState();
   }
   showScreen('screen-title');
 });
@@ -1701,6 +1821,13 @@ document.getElementById('btn-play-again').addEventListener('click', async () => 
 
 // EXIT button — leaves room and goes back to title
 document.getElementById('btn-exit-game').addEventListener('click', exitToTitle);
+
+// Confirm modal buttons
+document.getElementById('confirm-yes').addEventListener('click', async () => {
+  hideConfirmModal();
+  if (_confirmCallback) await _confirmCallback();
+});
+document.getElementById('confirm-no').addEventListener('click', hideConfirmModal);
 
 // ── CONNECTION CHECK ───────────────────
 async function init() {
