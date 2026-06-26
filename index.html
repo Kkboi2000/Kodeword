@@ -1644,7 +1644,11 @@ async function startGame() {
     await db.from('players').update({ role, assigned_word: assigned }).eq('id', p.id);
   }
 
-  const showRole = document.getElementById('show-role-toggle').classList.contains('on');
+  // In imposter mode role-showing is always ON (the imposter has no word, so
+  // they must be told they're the imposter). Otherwise read the toggle.
+  const showRole = mode === 'imposter'
+    ? true
+    : document.getElementById('show-role-toggle').classList.contains('on');
   await db.from('rooms').update({
     status: 'playing',
     word_a: wordA,
@@ -1668,6 +1672,8 @@ async function resetToLobby() {
   setLoading(false);
   document.getElementById('host-section').style.display = 'block';
   document.getElementById('word-card').classList.remove('flipped');
+  // Keep the lobby UI (SHOW ROLE visibility, labels) in sync with the chosen mode
+  applyModeUI(state.settings.mode || state.mode || 'normal');
 }
 
 async function exitToTitle() {
@@ -1828,15 +1834,16 @@ function applyModeUI(mode) {
   if (mode === 'imposter') {
     if (lbl) lbl.textContent = 'IMPOSTERS';
     if (sub) sub.textContent = 'players with no word';
-    // SHOW ROLE still works (reveals "IMPOSTER" label) — keep it visible
-    if (roleSection) {
-      const rsLabel = roleSection.querySelector('.toggle-sub');
-      if (rsLabel) rsLabel.textContent = 'Display imposter / majority label';
-    }
+    // SHOW ROLE is irrelevant in imposter mode — the imposter must always
+    // be told they're the imposter (they get no word). Hide the toggle and
+    // force role-showing ON.
+    if (roleSection) roleSection.style.display = 'none';
+    document.getElementById('show-role-toggle').classList.add('on');
   } else {
     if (lbl) lbl.textContent = 'MINORITY PLAYERS';
     if (sub) sub.textContent = 'gets the different word';
     if (roleSection) {
+      roleSection.style.display = 'block';
       const rsLabel = roleSection.querySelector('.toggle-sub');
       if (rsLabel) rsLabel.textContent = 'Display majority / minority label';
     }
