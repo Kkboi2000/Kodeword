@@ -275,6 +275,33 @@ body::after {
   font-family: var(--font-mono); font-size: 16px; color: var(--white);
   display: flex; align-items: center; justify-content: center;
 }
+
+/* ── GAME MODE SELECTOR ── */
+.mode-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.mode-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: #4a7a9a; padding: 14px 10px; font-family: var(--font-mono);
+  cursor: pointer; text-align: center; transition: all .15s;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.mode-btn .mode-icon { font-size: 26px; }
+.mode-btn .mode-name {
+  font-family: var(--font-display); font-size: 20px; letter-spacing: 2px;
+}
+.mode-btn .mode-desc { font-size: 9px; letter-spacing: .5px; line-height: 1.4; }
+.mode-btn.active {
+  border-color: var(--pink); color: var(--white);
+  background: rgba(255,61,127,.06);
+  box-shadow: 0 0 12px rgba(255,61,127,.4);
+}
+.mode-btn.active.normal {
+  border-color: var(--neon); background: rgba(0,229,255,.06);
+  box-shadow: var(--glow-neon);
+}
+.mode-btn.active .mode-name { color: inherit; }
+
 .theme-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   gap: 8px;
@@ -391,6 +418,15 @@ body::after {
   text-align: center; line-height: 1.1;
   text-shadow: var(--glow-green);
 }
+/* Imposter look on the back of the card */
+.card-back.imposter .card-word {
+  color: var(--pink);
+  text-shadow: 0 0 12px rgba(255,61,127,.6), 0 0 24px rgba(255,61,127,.3);
+}
+.card-imposter-icon {
+  font-size: 72px;
+  filter: drop-shadow(0 0 14px rgba(255,61,127,.5));
+}
 .card-role {
   font-size: 11px; letter-spacing: 3px;
   text-transform: uppercase; padding: 4px 12px;
@@ -398,6 +434,7 @@ body::after {
 }
 .card-role.majority { color: var(--neon); border-color: var(--neon); }
 .card-role.minority { color: var(--pink); border-color: var(--pink); }
+.card-role.imposter { color: var(--pink); border-color: var(--pink); }
 .card-corner {
   position: absolute; font-size: 10px; color: #1a3a52; letter-spacing: 1px;
 }
@@ -464,6 +501,7 @@ body::after {
 }
 .result-player .prole.majority { color: var(--neon); border-color: var(--neon); }
 .result-player .prole.minority { color: var(--pink); border-color: var(--pink); }
+.result-player .prole.imposter { color: var(--pink); border-color: var(--pink); }
 .results-btn-row {
   display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
 }
@@ -604,7 +642,7 @@ body::after {
 
   <div class="drawer-section credits-text">
     <div style="font-size:11px;color:#1a3a52;margin-bottom:6px;letter-spacing:1px">CREDITS</div>
-    Kodeword v1.52<br>
+    Kodeword v1.53<br>
     Vibe coding product<br>
     A party game of words<br>
     and hidden identities.<br>
@@ -673,10 +711,26 @@ body::after {
     <div class="player-list" id="player-list"></div>
 
     <div class="form-section">
+      <div class="form-label">GAME MODE</div>
+      <div class="mode-grid" id="mode-grid">
+        <button class="mode-btn normal active" data-mode="normal">
+          <span class="mode-icon">🃏</span>
+          <span class="mode-name">NORMAL</span>
+          <span class="mode-desc">Minority gets a similar word</span>
+        </button>
+        <button class="mode-btn" data-mode="imposter">
+          <span class="mode-icon">🕶</span>
+          <span class="mode-name">IMPOSTER</span>
+          <span class="mode-desc">Imposter gets no word at all</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-section">
       <div class="form-row">
         <div>
-          <div class="form-label">MINORITY PLAYERS</div>
-          <div style="font-size:10px;color:#2a5a7a">gets the different word</div>
+          <div class="form-label" id="minority-label">MINORITY PLAYERS</div>
+          <div style="font-size:10px;color:#2a5a7a" id="minority-sublabel">gets the different word</div>
         </div>
         <div class="number-input">
           <button class="num-btn" id="minority-dec">−</button>
@@ -691,7 +745,7 @@ body::after {
       <div class="theme-grid" id="theme-grid"></div>
     </div>
 
-    <div class="form-section">
+    <div class="form-section" id="show-role-section">
       <div class="toggle-row-form">
         <div>
           <div class="toggle-label">SHOW ROLE</div>
@@ -762,9 +816,10 @@ body::after {
       <div class="card-corner tl">KODEWORD</div>
       <div class="card-corner br">KODEWORD</div>
     </div>
-    <div class="card-back">
+    <div class="card-back" id="card-back">
       <div class="card-corner tl">KODEWORD</div>
       <div class="card-corner br">KODEWORD</div>
+      <div class="card-imposter-icon" id="card-imposter-icon" style="display:none">🕶</div>
       <div class="card-word" id="card-word-text">—</div>
       <div class="card-role" id="card-role-badge" style="display:none"></div>
     </div>
@@ -788,7 +843,7 @@ body::after {
       <div class="word-reveal-word" id="result-word-a">—</div>
     </div>
     <div class="word-reveal b">
-      <div class="word-reveal-label">MINORITY WORD</div>
+      <div class="word-reveal-label" id="result-word-b-label">MINORITY WORD</div>
       <div class="word-reveal-word" id="result-word-b">—</div>
     </div>
   </div>
@@ -834,7 +889,7 @@ const state = {
   isHost:     false,
   word:       null,
   role:       null,
-  settings:   { minority: 1, theme: 'Profession', showRole: true },
+  settings:   { minority: 1, theme: 'profession', showRole: true, mode: 'normal' },
   // language is PERSONAL — stored in localStorage, never shared
   language:   localStorage.getItem('kw_lang') || 'en',
   sound:      localStorage.getItem('kw_sound') !== 'off',
@@ -846,8 +901,19 @@ const state = {
   wordA: null,
   wordB: null,
   myRole: null,
+  mode: 'normal',
 };
 localStorage.setItem('kw_pid', state.playerId);
+
+// ── IMPOSTER STRINGS (localized) ───────
+const IMPOSTER_TEXT = {
+  en: { word: "YOU'RE THE\nIMPOSTER", role: 'IMPOSTER', resultLabel: 'IMPOSTER', resultWord: 'NO WORD' },
+  th: { word: 'คุณคือ\nตัวปลอม',       role: 'ตัวปลอม',  resultLabel: 'ตัวปลอม',  resultWord: 'ไม่มีคำ' },
+  jp: { word: 'あなたは\n偽物です',      role: '偽物',     resultLabel: '偽物',     resultWord: '言葉なし' },
+};
+function getImposterText() {
+  return IMPOSTER_TEXT[state.language] || IMPOSTER_TEXT.en;
+}
 
 // ── MUSIC ENGINE ──────────────────────
 let musicCtx = null;
@@ -1178,6 +1244,11 @@ function playSound(type) {
   } catch(e) {}
 }
 
+// ── IS THIS AN IMPOSTER GAME? ──────────
+function isImposterMode() {
+  return (state.settings.mode || state.mode || 'normal') === 'imposter';
+}
+
 // ── GET MY WORD IN MY LANGUAGE ─────────
 // The DB stores assigned_word in the language the HOST used when starting.
 // Instead, we store wordA/wordB globally and look up from WORD_PAIRS
@@ -1207,11 +1278,30 @@ function getMyWordInMyLang() {
 }
 
 function updateCardWord() {
+  const cardBack = document.getElementById('card-back');
+  const wordEl = document.getElementById('card-word-text');
+  const imposterIcon = document.getElementById('card-imposter-icon');
+
+  // IMPOSTER MODE: the minority is the imposter and gets NO word
+  if (isImposterMode() && state.myRole === 'minority') {
+    const txt = getImposterText();
+    cardBack.classList.add('imposter');
+    imposterIcon.style.display = 'block';
+    wordEl.textContent = txt.word;
+    wordEl.style.whiteSpace = 'pre-line';
+    wordEl.style.fontFamily = state.language === 'jp'
+      ? "'Noto Sans JP', sans-serif"
+      : "'Bebas Neue', sans-serif";
+    return;
+  }
+
+  // NORMAL display
+  cardBack.classList.remove('imposter');
+  imposterIcon.style.display = 'none';
+  wordEl.style.whiteSpace = 'normal';
   const word = getMyWordInMyLang();
-  document.getElementById('card-word-text').textContent = word || '???';
-  // update font for JP
-  const el = document.getElementById('card-word-text');
-  el.style.fontFamily = state.language === 'jp'
+  wordEl.textContent = word || '???';
+  wordEl.style.fontFamily = state.language === 'jp'
     ? "'Noto Sans JP', sans-serif"
     : "'Bebas Neue', sans-serif";
 }
@@ -1280,8 +1370,9 @@ async function handleRoomChange(room) {
       // Store the canonical EN word pair from room for language lookup
       state.wordA = room.word_a;
       state.wordB = room.word_b;
-      // Also store the theme from room settings
+      // Also store the theme + mode from room settings
       if (room.settings?.theme) state.settings.theme = room.settings.theme;
+      if (room.settings?.mode)  { state.settings.mode = room.settings.mode; state.mode = room.settings.mode; }
 
       playSound('start');
       renderGameScreen(room);
@@ -1348,15 +1439,23 @@ function renderPlayerChips(players, containerId) {
 function renderGameScreen(room) {
   document.getElementById('game-room-code-display').textContent = state.roomCode;
 
-  // Use personal language for word display
+  // Use personal language for word display (handles imposter internally)
   updateCardWord();
 
   const roleBadge = document.getElementById('card-role-badge');
   const settings = room.settings || {};
   if (settings.show_role && state.role) {
     roleBadge.style.display = 'block';
-    roleBadge.textContent = state.role.toUpperCase();
-    roleBadge.className = 'card-role ' + state.role;
+    // In imposter mode, the minority is labelled "IMPOSTER" (localized)
+    if (isImposterMode() && state.role === 'minority') {
+      roleBadge.textContent = getImposterText().role;
+      roleBadge.className = 'card-role imposter';
+      roleBadge.style.fontFamily = state.language === 'jp' ? "'Noto Sans JP', sans-serif" : '';
+    } else {
+      roleBadge.textContent = state.role.toUpperCase();
+      roleBadge.className = 'card-role ' + state.role;
+      roleBadge.style.fontFamily = '';
+    }
   } else {
     roleBadge.style.display = 'none';
   }
@@ -1370,6 +1469,8 @@ function renderGameScreen(room) {
 }
 
 async function renderResultsScreen(room) {
+  const imposter = (room.settings?.mode || 'normal') === 'imposter';
+
   // Translate the revealed words into this player's chosen language
   const theme = resolveTheme((room.settings?.theme) || state.settings.theme || 'profession');
   const lang    = state.language;
@@ -1387,6 +1488,17 @@ async function renderResultsScreen(room) {
       displayA = localPairs[pairIdx][0];
       displayB = localPairs[pairIdx][1];
     }
+  }
+
+  const labelB = document.getElementById('result-word-b-label');
+
+  if (imposter) {
+    // In imposter mode there's no second word — show the imposter label instead
+    const txt = getImposterText();
+    if (labelB) labelB.textContent = txt.resultLabel;
+    displayB = txt.resultWord;
+  } else {
+    if (labelB) labelB.textContent = 'MINORITY WORD';
   }
 
   document.getElementById('result-word-a').textContent = displayA;
@@ -1409,9 +1521,18 @@ async function renderResultsScreen(room) {
     players.forEach(p => {
       const row = document.createElement('div');
       row.className = 'result-player';
+      // Label the minority as "imposter" in imposter games
+      let roleClass = p.role || '';
+      let roleText  = (p.role || '?').toUpperCase();
+      if (imposter && p.role === 'minority') {
+        roleClass = 'imposter';
+        roleText  = getImposterText().resultLabel;
+      }
+      const jpFont = (imposter && p.role === 'minority' && lang === 'jp')
+        ? "style=\"font-family:'Noto Sans JP',sans-serif\"" : '';
       row.innerHTML = `
         <span class="pname">${p.nickname || 'Player'}${p.is_host ? ' ♛' : ''}</span>
-        <span class="prole ${p.role}">${(p.role||'?').toUpperCase()}</span>
+        <span class="prole ${roleClass}" ${jpFont}>${roleText}</span>
       `;
       list.appendChild(row);
     });
@@ -1449,7 +1570,7 @@ async function createRoom() {
     status: 'waiting',
     word_a: null,
     word_b: null,
-    settings: { minority: 1, theme: 'profession', show_role: true },
+    settings: { minority: 1, theme: 'profession', show_role: true, mode: 'normal' },
   });
   if (re) { setLoading(false); showToast('Error creating room: ' + re.message); state.roomCode = null; state.isHost = false; return; }
 
@@ -1498,20 +1619,28 @@ async function startGame() {
 
   const theme = resolveTheme(state.settings.theme);
   state.settings.theme = theme; // normalise
+  const mode = state.settings.mode || 'normal';
   // Host picks words using their own language, but we always
   // store the English index so guests can translate to their own language
   const enPairs = WORD_PAIRS[theme]['en'];
   const pairIdx = Math.floor(Math.random() * enPairs.length);
   const wordA   = enPairs[pairIdx][0];
-  const wordB   = enPairs[pairIdx][1];
+  // In imposter mode there is NO minority word — only the majority word exists
+  const wordB   = mode === 'imposter' ? null : enPairs[pairIdx][1];
 
   const shuffled = shuffle(players);
   const minority = shuffled.slice(0, minCount).map(p => p.id);
 
   for (const p of players) {
     const role = minority.includes(p.id) ? 'minority' : 'majority';
-    // assigned_word stores the English word — display is done client-side per language
-    const assigned = role === 'minority' ? wordB : wordA;
+    // assigned_word stores the English word — display is done client-side per language.
+    // In imposter mode, the minority (imposter) gets no word.
+    let assigned;
+    if (role === 'minority') {
+      assigned = mode === 'imposter' ? null : wordB;
+    } else {
+      assigned = wordA;
+    }
     await db.from('players').update({ role, assigned_word: assigned }).eq('id', p.id);
   }
 
@@ -1520,7 +1649,7 @@ async function startGame() {
     status: 'playing',
     word_a: wordA,
     word_b: wordB,
-    settings: { minority: minCount, theme, show_role: showRole },
+    settings: { minority: minCount, theme, show_role: showRole, mode },
   }).eq('id', state.roomCode);
 
   setLoading(false);
@@ -1686,10 +1815,47 @@ THEMES.forEach(t => {
   themeGrid.appendChild(btn);
 });
 
+// ── GAME MODE SELECTOR ──
+const modeGrid = document.getElementById('mode-grid');
+function applyModeUI(mode) {
+  modeGrid.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  // Update minority label wording to reflect the mode
+  const lbl = document.getElementById('minority-label');
+  const sub = document.getElementById('minority-sublabel');
+  const roleSection = document.getElementById('show-role-section');
+  if (mode === 'imposter') {
+    if (lbl) lbl.textContent = 'IMPOSTERS';
+    if (sub) sub.textContent = 'players with no word';
+    // SHOW ROLE still works (reveals "IMPOSTER" label) — keep it visible
+    if (roleSection) {
+      const rsLabel = roleSection.querySelector('.toggle-sub');
+      if (rsLabel) rsLabel.textContent = 'Display imposter / majority label';
+    }
+  } else {
+    if (lbl) lbl.textContent = 'MINORITY PLAYERS';
+    if (sub) sub.textContent = 'gets the different word';
+    if (roleSection) {
+      const rsLabel = roleSection.querySelector('.toggle-sub');
+      if (rsLabel) rsLabel.textContent = 'Display majority / minority label';
+    }
+  }
+}
+modeGrid.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mode = btn.dataset.mode;
+    state.settings.mode = mode;
+    state.mode = mode;
+    applyModeUI(mode);
+  });
+});
+
 // Minority counter
 let minorityCount = 1;
 document.getElementById('minority-dec').addEventListener('click', () => {
   if (minorityCount > 1) { minorityCount--; document.getElementById('minority-val').textContent = minorityCount; }
+  state.settings.minority = minorityCount;
 });
 document.getElementById('minority-inc').addEventListener('click', () => {
   minorityCount++;
@@ -1732,6 +1898,20 @@ document.querySelectorAll('[data-lang]').forEach(btn => {
       // Also update the localized theme label
       const themeLabelEl = document.getElementById('game-theme-label');
       if (themeLabelEl) themeLabelEl.textContent = getLocalThemeLabel(state.settings.theme) || '—';
+      // Update role badge (imposter label is localized)
+      if (state.currentRoom) {
+        const settings = state.currentRoom.settings || {};
+        const roleBadge = document.getElementById('card-role-badge');
+        if (settings.show_role && state.role) {
+          if (isImposterMode() && state.role === 'minority') {
+            roleBadge.textContent = getImposterText().role;
+            roleBadge.style.fontFamily = state.language === 'jp' ? "'Noto Sans JP', sans-serif" : '';
+          } else {
+            roleBadge.textContent = state.role.toUpperCase();
+            roleBadge.style.fontFamily = '';
+          }
+        }
+      }
       // re-flip card to front so player re-taps to see new language
       document.getElementById('word-card').classList.remove('flipped');
       showToast('Language updated — tap card to reveal');
